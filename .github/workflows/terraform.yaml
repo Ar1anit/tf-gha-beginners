@@ -2,30 +2,41 @@ name: 'Terraform'
  
 on:
   workflow_dispatch:
-
+  push:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
 
 permissions:
   contents: read
   id-token: write
+  pull-requests: write
 
 jobs:
   terraform:
     name: 'Terraform'
+    runs-on: ubuntu-latest
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_USE_OIDC: true
-      ARM_MSI_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
       TF_VERSION: 1.5.7
-    runs-on: ubuntu-latest
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+      WORKING_DIR: "./terraform"
+    
     defaults:
       run:
         shell: bash
+        working-directory: ${{ env.WORKING_DIR }}
  
     steps:
-    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v4
+
     - name: Azure Login
       uses: azure/login@v1
       with:
@@ -33,41 +44,49 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Checkout
-      uses: actions/checkout@v2
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        terraform_wrapper: false
+
+    - name: Terraform Format
+      id: fmt
+      run: terraform fmt -check -recursive
+      continue-on-error: true
  
-    - name: 'Terraform Format'
-      uses: hashicorp/terraform-github-actions@master
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color -out=tfplan
+      
+    - name: Add Plan Comment to PR
+      uses: actions/github-script@v7
+      if: github.event_name == 'pull_request'
       with:
-        tf_actions_version: ${{ env.TF_VERSION }}
-        tf_actions_subcommand: 'fmt'
-        tf_actions_working_dir: "./terraform"
-         
-    - name: 'Terraform Init'
-      uses: hashicorp/terraform-github-actions@master
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const planOutput = fs.readFileSync('${{ env.WORKING_DIR }}/tfplan.output', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '## Terraform Plan\n```\n' + planOutput + '\n```'
+          });
+
+    - name: Terraform Security Scan
+      uses: aquasecurity/tfsec-sarif-action@v0.1.4
       with:
-        tf_actions_version: ${{ env.TF_VERSION }}
-        tf_actions_subcommand: 'init'
-        tf_actions_working_dir: "./terraform"
- 
-    - name: 'Terraform Validate'
-      uses: hashicorp/terraform-github-actions@master
-      with:
-        tf_actions_version: ${{ env.TF_VERSION }}
-        tf_actions_subcommand: 'validate'
-        tf_actions_working_dir: "./terraform"
-         
-    - name: 'Terraform Plan'
-      uses: hashicorp/terraform-github-actions@master
-      with:
-        tf_actions_version: ${{ env.TF_VERSION }}
-        tf_actions_subcommand: 'plan'
-        tf_actions_working_dir: "./terraform"
- 
+        working_directory: ${{ env.WORKING_DIR }}
+
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
-      uses: hashicorp/terraform-github-actions@master
-      with:
-        tf_actions_version: ${{ env.TF_VERSION }}
-        tf_actions_subcommand: 'apply'
-        tf_actions_working_dir: "./terraform"
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve tfplan
