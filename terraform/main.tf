@@ -1,16 +1,16 @@
 terraform {
   required_version = ">= 1.5.7"
   backend "azurerm" {
-    resource_group_name  = "tf-gha-beginners"  # Replace with your resource group name
-    storage_account_name = "tfghabeginners"    # Replace with your storage account name
-    container_name       = "gha-tfstate"       # Replace with your container name
-    key                  = "terraform.tfstate" # Replace with your state file name, IF NEEDED
+    resource_group_name  = "" # Replace with your resource group name
+    storage_account_name = "" # Replace with your storage account name
+    container_name       = "" # Replace with your container name
+    key                  = "" # Replace with your state file name, IF NEEDED
   }
 }
 
 provider "azurerm" {
   features {}
-  subscription_id = "6a92ca5b-322c-40f3-93b9-edacdaaf4424" # Replace with your Azure subscription ID
+  subscription_id = "" # Replace with your Azure subscription ID
 }
 
 data "azurerm_client_config" "current" {}
