@@ -7,20 +7,20 @@ terraform {
     key                  = "tfstate"
   }
 }
- 
+
 provider "azurerm" {
   features {}
   subscription_id = "6a92ca5b-322c-40f3-93b9-edacdaaf4424"
 }
- 
+
 data "azurerm_client_config" "current" {}
- 
+
 #Create Resource Group
 resource "azurerm_resource_group" "example" {
   name     = "tf-gha-rg"
   location = "germanywest"
 }
- 
+
 #Create Virtual Network
 resource "azurerm_virtual_network" "vnet" {
   name                = "tf-gha-vnet"
@@ -28,7 +28,7 @@ resource "azurerm_virtual_network" "vnet" {
   location            = "germanywest"
   resource_group_name = azurerm_resource_group.example.name
 }
- 
+
 # Create Subnet
 resource "azurerm_subnet" "subnet" {
   name                 = "subnet"
