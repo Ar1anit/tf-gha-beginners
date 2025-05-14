@@ -10,7 +10,7 @@ terraform {
 
 provider "azurerm" {
   features {}
-  subscription_id = "your-subscription-id" # Replace with your Azure subscription ID
+  subscription_id = "6a92ca5b-322c-40f3-93b9-edacdaaf4424" # Replace with your Azure subscription ID
 }
 
 data "azurerm_client_config" "current" {}
