@@ -1,9 +1,9 @@
 terraform {
   required_version = ">= 1.5.7"
   backend "azurerm" {
-    resource_group_name  = "your-resource-group" # Replace with your resource group name
-    storage_account_name = "yourstorageaccount"  # Replace with your storage account name
-    container_name       = "your-container"      # Replace with your container name
+    resource_group_name  = "tf-gha-beginners" # Replace with your resource group name
+    storage_account_name = "tfghabeginners"  # Replace with your storage account name
+    container_name       = "gha-tfstate"      # Replace with your container name
     key                  = "terraform.tfstate"   # Replace with your state file name, IF NEEDED
   }
 }
